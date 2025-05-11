@@ -4,3 +4,5 @@ pillow
 streamlit
 google-generativeai
 langchain
+langchain-google-genai
+google-generativeai
