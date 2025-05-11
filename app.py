@@ -6,7 +6,7 @@ import cv2
 import tempfile
 import os
 
-model = YOLO("C:/Users/d7fx9/HEKAYA/best2.pt")
+model = YOLO("best2.pt")
 
 st.title("🔤 AI Letter Detection")
 st.markdown("اختر طريقة الإدخال:")
