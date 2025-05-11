@@ -14,6 +14,14 @@ model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف ف
 model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
 model = YOLO(model_path)
 
+# 🗺️ قاموس تحويل الأحرف الإنجليزية إلى العربية
+label_map = {
+    "A": "أ", "B": "ب", "T": "ت", "TH": "ث", "J": "ج", "HA": "ح", "KH": "خ", "D": "د",
+    "THL": "ذ", "R": "ر", "Z": "ز", "S": "س", "SH": "ش", "SD": "ص", "TD": "ض", "TA": "ط",
+    "AN": "ع", "QN": "غ", "F": "ف", "QA": "ق", "K": "ك", "L": "ل", "M": "م", "N": "ن",
+    "H": "ه", "W": "و", "E": "ي", "SPACE": " "
+}
+
 st.title("📷 AI Letter Detection")
 input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا"])
 
@@ -27,8 +35,6 @@ elif input_method == "📸 كاميرا":
 # ✅ معالجة صورة ثابتة
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
-    if input_method == "📸 كاميرا":
-        image = image.rotate(90, expand=True)  # تدوير الصورة لتكون بالعرض
     st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
@@ -63,6 +69,12 @@ if uploaded_file is not None:
     st.subheader("🔠 النتيجة (من اليمين لليسار):")
     st.success(" ".join(letters))
 
+    # ✨ عرض الترجمة العربية
+    arabic_letters = [label_map.get(l, l) for l in letters]
+    st.subheader("🗣️ الترجمة إلى العربية:")
+    st.success("".join(arabic_letters))
+
+    # 📦 رسم المربعات
     image_np = np.array(image)
     for i in range(len(xyxy)):
         x1, y1, x2, y2 = map(int, xyxy[i])
