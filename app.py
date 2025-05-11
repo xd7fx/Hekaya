@@ -7,105 +7,110 @@ import tempfile
 import os
 import time
 
-# اختيار الموديل أولاً
-st.title("🔤 AI Letter Detection")
-model_choice = st.selectbox("🧠 اختر الموديل:", ["🟢 best2.pt (4 حروف)", "🔵 best3.pt (28 حرف)"])
+st.set_page_config(page_title="Lihyanite AI Detector", layout="centered")
+
+# اختيار الموديل
+model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف فقط (best2)", "🔡 جميع الأحرف (best3)"])
 model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
 model = YOLO(model_path)
 
-st.markdown("### اختر طريقة الإدخال:")
-input_method = st.radio("📷 مصدر الصورة", ["📁 رفع صورة", "📸 كاميرا", "📡 لايف ديتكشن"])
+# اختيار نوع الإدخال
+st.title("📷 AI Letter Detection")
+input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا", "📡 لايف ديتيكشن"])
 
+# معالجة إدخال الصورة
 uploaded_file = None
+if input_method == "📁 رفع صورة":
+    uploaded_file = st.file_uploader("ارفع صورة", type=["jpg", "jpeg", "png"])
+elif input_method == "📸 كاميرا":
+    uploaded_file = st.camera_input("التقط صورة بالكاميرا")
 
-# 📁 رفع صورة أو 📸 كاميرا
-if input_method in ["📁 رفع صورة", "📸 كاميرا"]:
-    if input_method == "📁 رفع صورة":
-        uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-    else:
-        uploaded_file = st.camera_input("التقط صورة")
+# لايف ديتيكشن
+if input_method == "📡 لايف ديتيكشن":
+    run = st.checkbox("✅ بدء البث من الكاميرا")
+    FRAME_WINDOW = st.image([])
+    cap = cv2.VideoCapture(0)
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="📸 الصورة المدخلة", use_container_width=True)
+    while run:
+        ret, frame = cap.read()
+        if not ret:
+            st.warning("❌ لم يتم التقاط صورة من الكاميرا.")
+            break
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-            image.save(temp.name)
-            image_path = temp.name
-
-        results = model.predict(image_path, imgsz=896, save=False)[0]
+        results = model.predict(frame, imgsz=896, save=False)[0]
         boxes = results.boxes
         names = model.names
 
-        xyxy = boxes.xyxy.cpu().numpy()
-        conf = boxes.conf.cpu().numpy()
-        cls = boxes.cls.cpu().numpy().astype(int)
-
-        bboxes = [[int(x[0]), int(x[1]), int(x[2] - x[0]), int(x[3] - x[1])] for x in xyxy]
-        indices = cv2.dnn.NMSBoxes(bboxes, conf.tolist(), score_threshold=0.1, nms_threshold=0.3)
-
-        final = []
-        seen = set()
-        if len(indices) > 0:
-            indices = indices.flatten()
-            for i in indices:
-                x_center = (xyxy[i][0] + xyxy[i][2]) / 2
-                key = int(x_center // 60)
-                if key not in seen:
-                    seen.add(key)
-                    final.append((x_center, names[cls[i]], conf[i]))
-
-        sorted_final = sorted(final, key=lambda x: -x[0])
-        letters = [l for _, l, _ in sorted_final]
-
-        st.subheader("🔠 النتيجة (من اليمين لليسار):")
-        st.success(" ".join(letters))
-
-        with st.expander("📦 تفاصيل كل باوندري بوكس:"):
-            for i in range(len(xyxy)):
-                st.info(f"{names[cls[i]]} ({conf[i]:.2f})")
-
-# 📡 لايف ديتكشن
-elif input_method == "📡 لايف ديتكشن":
-    start = st.checkbox("▶️ بدء البث من الكاميرا")
-    frame_window = st.image([])
-
-    if start:
-        cap = cv2.VideoCapture(0)
-        st.info("اضغط على 'إلغاء التفعيل' لإيقاف البث.")
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                st.warning("⚠️ لم يتم التقاط صورة من الكاميرا.")
-                break
-
-            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-                cv2.imwrite(tmp.name, frame)
-                results = model.predict(tmp.name, imgsz=640, save=False)[0]
-
-            boxes = results.boxes
+        if boxes is not None and len(boxes.xyxy) > 0:
             xyxy = boxes.xyxy.cpu().numpy()
             conf = boxes.conf.cpu().numpy()
             cls = boxes.cls.cpu().numpy().astype(int)
 
-            predictions = []
             for i in range(len(xyxy)):
                 x1, y1, x2, y2 = map(int, xyxy[i])
                 label = f"{names[cls[i]]} ({conf[i]:.2f})"
-                predictions.append((x1, label, conf[i]))
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, names[cls[i]], (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                color = (0, 255, 0)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-            sorted_letters = sorted(predictions, key=lambda x: -x[0])
-            final_letters = [lbl.split()[0] for _, lbl, _ in sorted_letters]
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        FRAME_WINDOW.image(frame_rgb)
+        time.sleep(0.1)
 
-            frame_window.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB")
+    cap.release()
+    st.info("⏹️ اضغط لإلغاء التفعيل لإيقاف البث.")
 
-            st.subheader("🔠 التنبؤ (من اليمين لليسار):")
-            st.success(" ".join(final_letters))
+# معالجة صورة ثابتة
+if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
 
-            time.sleep(0.1)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
+        image.save(temp.name)
+        image_path = temp.name
 
-        cap.release()
+    results = model.predict(image_path, imgsz=896, save=False)[0]
+    boxes = results.boxes
+    names = model.names
+
+    xyxy = boxes.xyxy.cpu().numpy()
+    conf = boxes.conf.cpu().numpy()
+    cls = boxes.cls.cpu().numpy().astype(int)
+
+    # حساب مركز كل باوندري بوكس
+    bboxes = [[int(x[0]), int(x[1]), int(x[2] - x[0]), int(x[3] - x[1])] for x in xyxy]
+    indices = cv2.dnn.NMSBoxes(bboxes, conf.tolist(), score_threshold=0.1, nms_threshold=0.3)
+
+    # تصفية التكرار بناءً على أقرب موقع (بالمحور X)
+    final = []
+    seen = set()
+    if len(indices) > 0:
+        indices = indices.flatten()
+        for i in indices:
+            x_center = (xyxy[i][0] + xyxy[i][2]) / 2
+            key = int(x_center // 60)
+            if key not in seen:
+                seen.add(key)
+                final.append((x_center, names[cls[i]], conf[i]))
+
+    # الترتيب من اليمين لليسار
+    sorted_final = sorted(final, key=lambda x: -x[0])
+    letters = [l for _, l, _ in sorted_final]
+
+    st.subheader("🔠 النتيجة (من اليمين لليسار):")
+    st.success(" ".join(letters))
+
+    # رسم الباوندري بوكس
+    image_np = np.array(image)
+    for i in range(len(xyxy)):
+        x1, y1, x2, y2 = map(int, xyxy[i])
+        label = f"{names[cls[i]]} ({conf[i]:.2f})"
+        color = (0, 255, 0)
+        cv2.rectangle(image_np, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(image_np, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+    st.image(image_np, caption="📦 الصورة مع الباوندري بوكس", use_container_width=True)
+
+    with st.expander("📋 تفاصيل الباوندري بوكس الكاملة"):
+        for i in range(len(xyxy)):
+            st.info(f"{names[cls[i]]} ({conf[i]:.2f})")
