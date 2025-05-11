@@ -31,18 +31,12 @@ if input_method == "📁 رفع صورة":
     uploaded_file = st.file_uploader("ارفع صورة", type=["jpg", "jpeg", "png"])
 elif input_method == "📸 كاميرا":
     uploaded_file = st.camera_input("التقط صورة بالكاميرا")
-    if uploaded_file:
-        # تدوير الصورة 90 درجة لتكون بالعرض
-        image = Image.open(uploaded_file).convert("RGB")
-        image = image.transpose(method=Image.Transpose.ROTATE_270)
-        # إعادة حفظ الصورة في uploaded_file لتُستخدم لاحقًا
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_img:
-            image.save(temp_img.name)
-            uploaded_file = open(temp_img.name, "rb")
 
 # ✅ معالجة صورة ثابتة
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
+    if input_method == "📸 كاميرا":
+        image = image.rotate(-90, expand=True)  # تدوير الصورة لتكون بالعرض
     st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
