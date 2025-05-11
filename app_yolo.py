@@ -10,7 +10,7 @@ def run_yolo_app():
     st.title("🔠 التعرف على الحروف باستخدام YOLO")
 
     model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف فقط (best2)", "🔡 جميع الأحرف (best3)"])
-    model_path = "C:/Users/d7fx9/HEKAYA/best2.pt" if "best2" in model_choice else "C:/Users/d7fx9/HEKAYA/best3.pt"
+    model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
     model = YOLO(model_path)
 
     label_map = {
