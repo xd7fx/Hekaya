@@ -11,7 +11,14 @@ def run_gemini_app():
 
     st.title("📍 التعرف على المعلم من الصورة")
 
-    uploaded_file = st.file_uploader("ارفع صورة للمعلم", type=["jpg", "jpeg", "png"])
+    input_method = st.radio("🎯 مصدر الصورة", ["📁 رفع صورة", "📸 كاميرا"])
+    uploaded_file = None
+
+    if input_method == "📁 رفع صورة":
+        uploaded_file = st.file_uploader("ارفع صورة للمعلم", type=["jpg", "jpeg", "png"])
+    elif input_method == "📸 كاميرا":
+        uploaded_file = st.camera_input("📸 التقط صورة للمعلم")
+
     if uploaded_file:
         image_bytes = uploaded_file.getvalue()
         image = Image.open(uploaded_file)
