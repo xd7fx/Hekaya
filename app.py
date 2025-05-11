@@ -6,8 +6,6 @@ import numpy as np
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
-import av
 
 st.set_page_config(page_title="Lihyanite AI Detector", layout="centered")
 
@@ -17,41 +15,7 @@ model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
 model = YOLO(model_path)
 
 st.title("📷 AI Letter Detection")
-input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا", "📡 لايف ديتيكشن"])
-
-# 📡 لايف ديتيكشن (باستخدام WebRTC)
-class LiveDetector(VideoProcessorBase):
-    def __init__(self):
-        self.model = model
-        self.names = self.model.names
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        results = self.model.predict(img, imgsz=896, save=False)[0]
-        boxes = results.boxes
-
-        if boxes is not None and len(boxes.xyxy) > 0:
-            xyxy = boxes.xyxy.cpu().numpy()
-            conf = boxes.conf.cpu().numpy()
-            cls = boxes.cls.cpu().numpy().astype(int)
-
-            for i in range(len(xyxy)):
-                x1, y1, x2, y2 = map(int, xyxy[i])
-                label = f"{self.names[cls[i]]} ({conf[i]:.2f})"
-                color = (0, 255, 0)
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
-
-if input_method == "📡 لايف ديتيكشن":
-    webrtc_streamer(
-        key="live-detect",
-        mode=WebRtcMode.SENDRECV,
-        video_processor_factory=LiveDetector,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
-    )
+input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا"])
 
 # 📁 رفع صورة أو 📸 كاميرا
 uploaded_file = None
