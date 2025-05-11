@@ -1,15 +1,17 @@
+import os
+import time
+import tempfile
+import cv2
+import numpy as np
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
-import numpy as np
-import cv2
-import tempfile
-import os
-import time
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
+import av
 
 st.set_page_config(page_title="Lihyanite AI Detector", layout="centered")
 
-# اختيار الموديل
+# 🧠 اختيار الموديل
 model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف فقط (best2)", "🔡 جميع الأحرف (best3)"])
 model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
 model = YOLO(model_path)
@@ -17,29 +19,16 @@ model = YOLO(model_path)
 st.title("📷 AI Letter Detection")
 input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا", "📡 لايف ديتيكشن"])
 
-uploaded_file = None
-if input_method == "📁 رفع صورة":
-    uploaded_file = st.file_uploader("ارفع صورة", type=["jpg", "jpeg", "png"])
-elif input_method == "📸 كاميرا":
-    uploaded_file = st.camera_input("التقط صورة بالكاميرا")
+# 📡 لايف ديتيكشن (باستخدام WebRTC)
+class LiveDetector(VideoProcessorBase):
+    def __init__(self):
+        self.model = model
+        self.names = self.model.names
 
-# لايف ديتيكشن
-if input_method == "📡 لايف ديتيكشن":
-    run = st.checkbox("✅ بدء البث من الكاميرا")
-    FRAME_WINDOW = st.image([])
-
-    cap = cv2.VideoCapture(0)
-    st.info("⏹️ أوقف التفعيل لإيقاف البث.")
-
-    while run:
-        ret, frame = cap.read()
-        if not ret:
-            st.warning("❌ لم يتم التقاط صورة من الكاميرا.")
-            break
-
-        results = model.predict(frame, imgsz=896, save=False)[0]
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        results = self.model.predict(img, imgsz=896, save=False)[0]
         boxes = results.boxes
-        names = model.names
 
         if boxes is not None and len(boxes.xyxy) > 0:
             xyxy = boxes.xyxy.cpu().numpy()
@@ -48,18 +37,30 @@ if input_method == "📡 لايف ديتيكشن":
 
             for i in range(len(xyxy)):
                 x1, y1, x2, y2 = map(int, xyxy[i])
-                label = f"{names[cls[i]]} ({conf[i]:.2f})"
+                label = f"{self.names[cls[i]]} ({conf[i]:.2f})"
                 color = (0, 255, 0)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        FRAME_WINDOW.image(frame_rgb)
-        time.sleep(0.05)
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-    cap.release()
+if input_method == "📡 لايف ديتيكشن":
+    webrtc_streamer(
+        key="live-detect",
+        mode=WebRtcMode.SENDRECV,
+        video_processor_factory=LiveDetector,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
 
-# معالجة صورة ثابتة
+# 📁 رفع صورة أو 📸 كاميرا
+uploaded_file = None
+if input_method == "📁 رفع صورة":
+    uploaded_file = st.file_uploader("ارفع صورة", type=["jpg", "jpeg", "png"])
+elif input_method == "📸 كاميرا":
+    uploaded_file = st.camera_input("التقط صورة بالكاميرا")
+
+# ✅ معالجة صورة ثابتة
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
