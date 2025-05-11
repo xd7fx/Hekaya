@@ -14,11 +14,9 @@ model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف ف
 model_path = "best2.pt" if "best2" in model_choice else "best3.pt"
 model = YOLO(model_path)
 
-# اختيار نوع الإدخال
 st.title("📷 AI Letter Detection")
 input_method = st.radio("🎯 مصدر الإدخال", ["📁 رفع صورة", "📸 كاميرا", "📡 لايف ديتيكشن"])
 
-# معالجة إدخال الصورة
 uploaded_file = None
 if input_method == "📁 رفع صورة":
     uploaded_file = st.file_uploader("ارفع صورة", type=["jpg", "jpeg", "png"])
@@ -29,7 +27,9 @@ elif input_method == "📸 كاميرا":
 if input_method == "📡 لايف ديتيكشن":
     run = st.checkbox("✅ بدء البث من الكاميرا")
     FRAME_WINDOW = st.image([])
+
     cap = cv2.VideoCapture(0)
+    st.info("⏹️ أوقف التفعيل لإيقاف البث.")
 
     while run:
         ret, frame = cap.read()
@@ -55,10 +55,9 @@ if input_method == "📡 لايف ديتيكشن":
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         FRAME_WINDOW.image(frame_rgb)
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     cap.release()
-    st.info("⏹️ اضغط لإلغاء التفعيل لإيقاف البث.")
 
 # معالجة صورة ثابتة
 if uploaded_file is not None:
@@ -77,11 +76,9 @@ if uploaded_file is not None:
     conf = boxes.conf.cpu().numpy()
     cls = boxes.cls.cpu().numpy().astype(int)
 
-    # حساب مركز كل باوندري بوكس
     bboxes = [[int(x[0]), int(x[1]), int(x[2] - x[0]), int(x[3] - x[1])] for x in xyxy]
     indices = cv2.dnn.NMSBoxes(bboxes, conf.tolist(), score_threshold=0.1, nms_threshold=0.3)
 
-    # تصفية التكرار بناءً على أقرب موقع (بالمحور X)
     final = []
     seen = set()
     if len(indices) > 0:
@@ -93,14 +90,12 @@ if uploaded_file is not None:
                 seen.add(key)
                 final.append((x_center, names[cls[i]], conf[i]))
 
-    # الترتيب من اليمين لليسار
     sorted_final = sorted(final, key=lambda x: -x[0])
     letters = [l for _, l, _ in sorted_final]
 
     st.subheader("🔠 النتيجة (من اليمين لليسار):")
     st.success(" ".join(letters))
 
-    # رسم الباوندري بوكس
     image_np = np.array(image)
     for i in range(len(xyxy)):
         x1, y1, x2, y2 = map(int, xyxy[i])
