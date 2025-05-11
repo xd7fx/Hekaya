@@ -28,7 +28,7 @@ elif input_method == "📸 كاميرا":
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     if input_method == "📸 كاميرا":
-        image = image.rotate(-90, expand=True)  # تدوير الصورة لتكون بالعرض
+        image = image.rotate(90, expand=True)  # تدوير الصورة لتكون بالعرض
     st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
