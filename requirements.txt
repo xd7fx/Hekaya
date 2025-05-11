@@ -2,3 +2,5 @@ ultralytics
 opencv-python-headless
 pillow
 streamlit
+google-generativeai
+langchain
