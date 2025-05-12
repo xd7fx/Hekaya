@@ -2,22 +2,22 @@ import streamlit as st
 import os
 import base64
 import pandas as pd
-import difflib
 from PIL import Image
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 
 def run_gemini_app():
+    # إعداد مفتاح API
     GOOGLE_API_KEY = "AIzaSyCPjAE_mjkPZ7CF4om2VwTal68Ov-WTo1c"
     os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
     st.title("📍 التعرف على المعلم من الصورة")
 
-    # 🌐 اختيار اللغة
+    # اختيار اللغة
     lang = st.radio("🌐 اختر اللغة", ["🇸🇦 العربية", "🇺🇸 English"])
     csv_file = "description_ar.csv" if lang == "🇸🇦 العربية" else "description_en.csv"
 
-    # 🧠 تحميل بيانات المعالم من CSV
+    # تحميل قاعدة البيانات من CSV
     @st.cache_data
     def load_knowledge(file_path):
         df = pd.read_csv(file_path)
@@ -31,7 +31,7 @@ def run_gemini_app():
 
     knowledge_base = load_knowledge(csv_file)
 
-    # 📸 اختيار مصدر الصورة
+    # اختيار طريقة إدخال الصورة
     input_method = st.radio("🎯 مصدر الصورة", ["📁 رفع صورة", "📸 كاميرا"])
     uploaded_file = None
 
@@ -41,6 +41,7 @@ def run_gemini_app():
         uploaded_file = st.camera_input("📸 التقط صورة للمعلم")
 
     if uploaded_file:
+        # عرض الصورة
         image_bytes = uploaded_file.getvalue()
         image = Image.open(uploaded_file)
         st.image(image, caption="📍 الصورة", use_container_width=True)
@@ -51,7 +52,7 @@ def run_gemini_app():
 
         st.info("⏳ يتم التعرف على المعلم...")
 
-        # إعداد LLM
+        # إرسال الصورة إلى Gemini
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0.3,
@@ -70,12 +71,14 @@ def run_gemini_app():
             raw_response = response.content.strip()
             st.success(f"✅ تم التعرف على المعلم: {raw_response}")
 
-            # 🧠 تطابق ذكي مع الأسماء الموجودة في CSV
-            place_name = raw_response
-            match = difflib.get_close_matches(place_name, knowledge_base.keys(), n=1, cutoff=0.5)
+            # البحث الذكي عن الاسم داخل الجملة
+            matched_name = None
+            for name in knowledge_base.keys():
+                if name in raw_response:
+                    matched_name = name
+                    break
 
-            if match:
-                matched_name = match[0]
+            if matched_name:
                 st.subheader("📖 القصة:" if lang == "🇸🇦 العربية" else "📖 Story:")
                 st.write(knowledge_base[matched_name]["description"])
                 st.subheader("🎬 فيديو:")
