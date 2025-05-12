@@ -5,7 +5,6 @@ import pandas as pd
 from PIL import Image
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
-
 def run_gemini_app():
     # إعداد المفتاح
     GOOGLE_API_KEY = "AIzaSyCPjAE_mjkPZ7CF4om2VwTal68Ov-WTo1c"
