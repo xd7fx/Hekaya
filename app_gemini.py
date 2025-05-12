@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import base64
+import pandas as pd
 from PIL import Image
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
@@ -10,6 +11,21 @@ def run_gemini_app():
     os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
     st.title("📍 التعرف على المعلم من الصورة")
+
+    lang = st.radio("🌐 اختر اللغة", ["🇸🇦 العربية", "🇺🇸 English"])
+    csv_file = "description_ar.csv" if lang == "🇸🇦 العربية" else "description_en.csv"
+
+    @st.cache_data
+    def load_knowledge(file_path):
+        df = pd.read_csv(file_path)
+        return {
+            row["name"]: {
+                "description": row["description"],
+                "video_url": row["video_url"]
+            } for _, row in df.iterrows()
+        }
+
+    knowledge_base = load_knowledge(csv_file)
 
     input_method = st.radio("🎯 مصدر الصورة", ["📁 رفع صورة", "📸 كاميرا"])
     uploaded_file = None
@@ -44,8 +60,16 @@ def run_gemini_app():
 
         try:
             response = llm([msg])
-            st.success("✅ تم التعرف على المعلم:")
-            st.markdown(f"**📍 {response.content.strip()}**")
+            place_name = response.content.strip()
+            st.success(f"✅ تم التعرف على المعلم: {place_name}")
+
+            if place_name in knowledge_base:
+                st.subheader("📖 القصة:" if lang == "🇸🇦 العربية" else "📖 Story:")
+                st.write(knowledge_base[place_name]["description"])
+                st.subheader("🎬 فيديو:")
+                st.video(knowledge_base[place_name]["video_url"])
+            else:
+                st.warning("📌 لا توجد قصة محفوظة لهذا المعلم حتى الآن.")
         except Exception as e:
-            st.error("❌ حدث خطأ أثناء التعرف.")
+            st.error("❌ حدث خطأ أثناء محاولة التعرف.")
             st.exception(e)
