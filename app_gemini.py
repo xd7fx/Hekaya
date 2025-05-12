@@ -7,17 +7,46 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 
 def run_gemini_app():
-    # إعداد مفتاح API
+    # إعداد المفتاح
     GOOGLE_API_KEY = "AIzaSyCPjAE_mjkPZ7CF4om2VwTal68Ov-WTo1c"
     os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
-    st.title("📍 التعرف على المعلم من الصورة")
+    st.title("📍 Landmark Identifier | التعرف على المعالم")
 
-    # اختيار اللغة
-    lang = st.radio("🌐 اختر اللغة", ["🇸🇦 العربية", "🇺🇸 English"])
-    csv_file = "description_ar.csv" if lang == "🇸🇦 العربية" else "description_en.csv"
+    # 🌐 اختيار اللغة
+    lang = st.radio("🌐 Language / اللغة", ["🇸🇦 العربية", "🇺🇸 English"])
 
-    # تحميل قاعدة البيانات من CSV
+    # 🏷️ قاموس لكل النصوص حسب اللغة
+    labels = {
+        "🇸🇦 العربية": {
+            "csv": "description_ar.csv",
+            "prompt": "ما اسم هذا المعلم التاريخي؟",
+            "upload": "📁 رفع صورة",
+            "camera": "📸 التقاط صورة",
+            "processing": "⏳ يتم التعرف على المعلم...",
+            "success": "✅ تم التعرف على المعلم:",
+            "not_found": "📌 لا توجد قصة محفوظة لهذا المعلم حتى الآن.",
+            "story": "📖 القصة:",
+            "video": "🎬 الفيديو:"
+        },
+        "🇺🇸 English": {
+            "csv": "description_en.csv",
+            "prompt": "What is the name of this historical site?",
+            "upload": "📁 Upload Image",
+            "camera": "📸 Capture Image",
+            "processing": "⏳ Identifying the landmark...",
+            "success": "✅ Identified:",
+            "not_found": "📌 No story is currently available for this site.",
+            "story": "📖 Story:",
+            "video": "🎬 Video:"
+        }
+    }
+
+    # اختصار النصوص
+    L = labels[lang]
+    csv_file = L["csv"]
+
+    # تحميل قاعدة البيانات
     @st.cache_data
     def load_knowledge(file_path):
         df = pd.read_csv(file_path)
@@ -31,28 +60,25 @@ def run_gemini_app():
 
     knowledge_base = load_knowledge(csv_file)
 
-    # اختيار طريقة إدخال الصورة
-    input_method = st.radio("🎯 مصدر الصورة", ["📁 رفع صورة", "📸 كاميرا"])
+    # طريقة رفع الصورة
+    input_method = st.radio("🎯 Source", [L["upload"], L["camera"]])
     uploaded_file = None
 
-    if input_method == "📁 رفع صورة":
-        uploaded_file = st.file_uploader("ارفع صورة للمعلم", type=["jpg", "jpeg", "png"])
-    elif input_method == "📸 كاميرا":
-        uploaded_file = st.camera_input("📸 التقط صورة للمعلم")
+    if input_method == L["upload"]:
+        uploaded_file = st.file_uploader(L["upload"], type=["jpg", "jpeg", "png"])
+    elif input_method == L["camera"]:
+        uploaded_file = st.camera_input(L["camera"])
 
     if uploaded_file:
-        # عرض الصورة
         image_bytes = uploaded_file.getvalue()
         image = Image.open(uploaded_file)
-        st.image(image, caption="📍 الصورة", use_container_width=True)
+        st.image(image, caption="📍 Image", use_container_width=True)
 
-        # تحويل الصورة إلى base64
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         mime_type = uploaded_file.type
 
-        st.info("⏳ يتم التعرف على المعلم...")
+        st.info(L["processing"])
 
-        # إرسال الصورة إلى Gemini
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0.3,
@@ -62,30 +88,31 @@ def run_gemini_app():
         msg = HumanMessage(
             content=[
                 {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}},
-                {"type": "text", "text": "ما اسم هذا المعلم التاريخي؟"}
+                {"type": "text", "text": L["prompt"]}
             ]
         )
 
         try:
             response = llm([msg])
             raw_response = response.content.strip()
-            st.success(f"✅ تم التعرف على المعلم: {raw_response}")
+            st.success(f"{L['success']} {raw_response}")
 
-            # البحث الذكي عن الاسم داخل الجملة
+            # تطابق الاسم داخل الرد
             matched_name = None
             for name in knowledge_base.keys():
-                if name in raw_response:
+                if name.lower() in raw_response.lower():
                     matched_name = name
                     break
 
+
             if matched_name:
-                st.subheader("📖 القصة:" if lang == "🇸🇦 العربية" else "📖 Story:")
+                st.subheader(L["story"])
                 st.write(knowledge_base[matched_name]["description"])
-                st.subheader("🎬 فيديو:")
+                st.subheader(L["video"])
                 st.video(knowledge_base[matched_name]["video_url"])
             else:
-                st.warning("📌 لا توجد قصة محفوظة لهذا المعلم حتى الآن.")
+                st.warning(L["not_found"])
 
         except Exception as e:
-            st.error("❌ حدث خطأ أثناء محاولة التعرف.")
+            st.error("❌ Error during landmark identification.")
             st.exception(e)
