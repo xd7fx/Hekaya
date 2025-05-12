@@ -15,7 +15,7 @@ def run_gemini_app():
 
     # اختيار اللغة
     lang = st.radio("🌐 اختر اللغة", ["🇸🇦 العربية", "🇺🇸 English"])
-    csv_file = "clean_description_ar.csv" if lang == "🇸🇦 العربية" else "clean_description_en.csv"
+    csv_file = "description_ar.csv" if lang == "🇸🇦 العربية" else "description_en.csv"
 
     # تحميل البيانات من CSV
     @st.cache_data
