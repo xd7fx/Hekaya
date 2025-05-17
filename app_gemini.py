@@ -108,7 +108,12 @@ def run_gemini_app():
                 st.subheader(L["story"])
                 st.write(knowledge_base[matched_name]["description"])
                 st.subheader(L["video"])
-                st.video(knowledge_base[matched_name]["video_url"])
+
+                video_url = knowledge_base[matched_name]["video_url"]
+                if "youtube.com/shorts/" in video_url:
+                    video_id = video_url.split("/")[-1].split("?")[0]
+                    video_url = f"https://www.youtube.com/embed/{video_id}"
+                st.video(video_url)
             else:
                 st.warning(L["not_found"])
 
