@@ -9,9 +9,8 @@ from ultralytics import YOLO
 def run_yolo_app():
     st.title("🔠 التعرف على الحروف باستخدام YOLO")
 
-    model_choice = st.selectbox("🧠 اختر الموديل", ["🔤 4 أحرف فقط (best2)", "🔡 جميع الأحرف (best3)"])
-    model_path = "best2.pt" if "best2" in model_choice else "best4.pt"
-    model = YOLO(model_path)
+    # تحميل موديل best4 فقط
+    model = YOLO("best4.pt")
 
     label_map = {
         "A": "أ", "B": "ب", "T": "ت", "TH": "ث", "J": "ج", "HA": "ح", "KH": "خ", "D": "د",
@@ -29,6 +28,9 @@ def run_yolo_app():
 
     if uploaded_file:
         image = Image.open(uploaded_file).convert("RGB")
+        if input_method == "📸 كاميرا":
+            image = image.rotate(270, expand=True)  # تدوير صورة الكاميرا فقط
+
         st.image(image, caption="🖼️ الصورة المدخلة", use_container_width=True)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
