@@ -1,6 +1,8 @@
 
 # 🏺 Hekaya | حكاية – AI Cultural Heritage App
 
+![صورة واتساب بتاريخ 1446-11-13 في 22 07 52_7734bbf8](https://github.com/user-attachments/assets/f8c95e2b-af96-4a7b-8590-3c6c091b42a9)
+
 **Hekaya** is an interactive cultural AI platform that transforms ancient inscriptions and heritage landmarks into narrated stories.
 
 📌 It includes two main modules:
@@ -27,6 +29,8 @@ https://lihyan-translator-ai.streamlit.app/
 - 🧒 Provide a **child-friendly mode** with simple visuals and animations.
 
 ---
+
+![image](https://github.com/user-attachments/assets/79f5bfbf-9735-4c87-bced-35415169c79f)
 
 ## 🧠 Features
 
@@ -67,6 +71,8 @@ Hekaya/
 ---
 
 ## 📸 Example Use
+![image](https://github.com/user-attachments/assets/79d1e14b-1676-456d-90b2-164ed5ad8b79)
+![image](https://github.com/user-attachments/assets/ed7b3c5a-3db5-4eeb-9696-f3164dd9a4cb)
 
 **Input**  
 Upload a rock carving image from AlUla via the app.
